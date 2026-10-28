@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Cá Lớn Nuốt Cá Bé - Fish Frenzy English</title>
+  <meta name="description" content="Tựa game Cá Lớn Nuốt Cá Bé kết hợp thử thách học tiếng Anh cực vui nhộn trên nền tảng Web Canvas." />
+  
+  <!-- Google Fonts & Tailwind CSS CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti CDN cho hiệu ứng pháo hoa khi trả lời đúng -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Nunito', 'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #082f49;
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+    }
+    h1, h2, h3, h4, .font-fun {
+      font-family: 'Fredoka', 'Nunito', sans-serif;
+    }
+    @keyframes pulseAura {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+    .animate-pulse-aura {
+      animation: pulseAura 1.5s infinite ease-in-out;
+    }
+    /* Thanh cuộn gọn đẹp cho bảng câu hỏi */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.7); }
+  </style>
+</head>
+
+<body class="relative w-screen h-screen overflow-hidden bg-slate-950">
+
+  <!-- ================= CANVAS GAME ================= -->
+  <canvas id="gameCanvas" class="fixed inset-0 w-full h-full cursor-crosshair touch-none"></canvas>
+
+  <!-- ================= HUD (GIAO DIỆN KHI CHƠI) ================= -->
+  <div id="hud" class="absolute top-0 left-0 right-0 p-3 sm:p-4 pointer-events-none z-30 flex flex-col gap-2 transition-opacity duration-300">
+    <div class="flex items-center justify-between gap-2 max-w-7xl mx-auto w-full">
+      
+      <!-- Nhân vật & Thanh Tiến Hóa -->
+      <div class="flex items-center gap-2 pointer-events-auto bg-slate-900/85 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-sky-500/40 shadow-lg">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="hudSharkName" class="text-xs font-black text-amber-300 uppercase">Bé Cá Mập Cute</span>
+            <span id="hudLevelBadge" class="text-[10px] bg-sky-500 text-slate-950 font-black px-1.5 py-0.5 rounded-md">TIẾN HÓA CẤP 1</span>
+            <span id="hudFrenzyBadge" class="hidden inline-flex items-center gap-1 text-[10px] bg-yellow-400 text-slate-950 font-black px-2 py-0.5 rounded-md animate-pulse shadow-md shadow-yellow-500/50">
+              🔥 CUỒNG NỘ!
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <div class="w-28 sm:w-36 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+              <div id="hudGrowthBar" class="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <span id="hudGrowthPercent" class="text-[10px] text-sky-200 font-bold">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Điểm số & Mạng sống -->
+      <div class="flex items-center gap-3 pointer-events-auto bg-slate-900/85 backdrop-blur-md px-4 py-2 rounded-2xl border border-amber-400/50 shadow-lg">
+        <div class="text-center">
+          <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">ĐIỂM SỐ</span>
+          <span id="hudScore" class="text-xl sm:text-2xl font-black text-amber-300 leading-tight">0</span>
+        </div>
+        <div class="h-8 w-px bg-slate-700/80 mx-1"></div>
+        <div id="hudHearts" class="flex items-center gap-1 text-lg">
+          ❤️❤️❤️
+        </div>
+      </div>
+
+      <!-- Nút điều khiển -->
+      <div class="flex items-center gap-1.5 pointer-events-auto">
+        <button id="btnToggleDifficulty" class="px-3 py-2 bg-emerald-950/80 text-emerald-300 border border-emerald-500 rounded-xl font-bold text-xs shadow-md cursor-pointer hover:bg-emerald-900 transition">
+          Vừa 🟢
+        </button>
+        <button id="btnOpenQuestionBank" class="px-3 py-2 bg-gradient-to-r from-sky-700 to-blue-700 hover:from-sky-600 hover:to-blue-600 text-white rounded-xl font-bold text-xs shadow-md border border-sky-400/50 transition cursor-pointer">
+          📖 <span class="hidden sm:inline">Bảng Câu Hỏi</span>
+        </button>
+        <button id="btnToggleMute" class="p-2 bg-slate-900/80 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700 shadow-md transition cursor-pointer">
+          🔊
+        </button>
+        <button id="btnTogglePause" class="p-2 bg-slate-900/80 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700 shadow-md transition cursor-pointer">
+          ⏸️
+        </button>
+      </div>
+    </div>
+
+    <!-- Thanh Thể Lực Tăng Tốc -->
+    <div class="max-w-7xl mx-auto w-full flex items-center justify-between text-[11px] text-sky-200/80 px-2 pointer-events-none">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-slate-300">Tăng tốc (Space / Shift / Nhấp giữ chuột):</span>
+        <div class="w-24 h-1.5 bg-slate-950/80 rounded-full overflow-hidden border border-sky-400/30">
+          <div id="hudBoostBar" class="h-full bg-cyan-400 transition-all duration-75" style="width: 100%"></div>
+        </div>
+      </div>
+      <div class="hidden md:block">
+        Ăn cá có <strong class="text-yellow-300">⭐ CÂU ĐỐ</strong> để nhận siêu thưởng • Né tránh <strong class="text-rose-400">Nhím biển & Mìn nổ</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL CHỌN NHÂN VẬT & BẮT ĐẦU ================= -->
+  <div id="characterModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-xl bg-gradient-to-b from-sky-900/95 via-blue-950/95 to-slate-950 border-3 border-amber-400 rounded-3xl p-6 shadow-2xl text-white">
+      <div class="text-center mb-4">
+        <span class="px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs font-bold uppercase tracking-wider inline-block mb-2">
+          ✨ Phiên bản Thủy Cung Tiếng Anh
+        </span>
+        <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-sky-300">
+          CÁ LỚN NUỐT CÁ BÉ
+        </h1>
+        <p class="text-xs text-sky-200 mt-1">
+          Hóa thân thành cá mập săn mồi, chinh phục thử thách câu hỏi tiếng Anh và tiến hóa khổng lồ!
+        </p>
+      </div>
+
+      <!-- Chọn nhân vật -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div id="cardSharkBaby" onclick="selectShark('cute_baby_shark')" class="p-3.5 rounded-2xl border-2 border-amber-400 bg-sky-900/80 shadow-lg cursor-pointer transition text-center ring-2 ring-amber-400/50">
+          <div class="text-3xl mb-1">🦈</div>
+          <div class="text-sm font-black text-amber-300">Bé Cá Mập Cute</div>
+          <p class="text-[10px] text-sky-200 mt-0.5">Tròn xoe, lanh lẹ, bứt tốc cực êm!</p>
+          <span class="inline-block mt-2 text-[9px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full">ĐANG CHỌN</span>
+        </div>
+
+        <div id="cardSharkStarry" onclick="selectShark('starry_shark')" class="p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 hover:border-sky-500 cursor-pointer transition text-center">
+          <div class="text-3xl mb-1">🌌🦈</div>
+          <div class="text-sm font-black text-sky-300">Cá Mập Ngàn Sao</div>
+          <p class="text-[10px] text-sky-200 mt-0.5">Huyền bí, vây rộng, uy lực biển sâu!</p>
+          <span class="inline-block mt-2 text-[9px] bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded-full">BẤM ĐỂ CHỌN</span>
+        </div>
+      </div>
+
+      <!-- Chọn mức độ -->
+      <div class="mb-5 p-3 rounded-2xl bg-slate-900/80 border border-sky-600/40">
+        <div class="text-xs font-bold text-sky-300 uppercase tracking-wider mb-2">Chọn Độ Khó:</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnDiffMedium" onclick="setDifficulty('medium')" class="p-2 rounded-xl border-2 border-amber-400 bg-sky-900/90 text-emerald-300 font-black text-xs">
+            🟢 Mức Độ Vừa (Thong thả)
+          </button>
+          <button id="btnDiffHard" onclick="setDifficulty('hard')" class="p-2 rounded-xl border-2 border-slate-700 bg-slate-950/60 text-slate-400 font-bold text-xs hover:border-rose-400">
+            ⚡ Mức Độ Khó (Nhiều mìn & sứa)
+          </button>
+        </div>
+      </div>
+
+      <button onclick="startGame()" class="w-full py-4 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:brightness-110 text-slate-950 rounded-2xl font-black text-lg shadow-xl shadow-amber-500/30 cursor-pointer transition transform active:scale-95">
+        🚀 BẮT ĐẦU ĐI SĂN NGAY!
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL CÂU ĐỐ TIẾNG ANH (KHI BẮT ĐƯỢC CÁ THÔNG THÁI) ================= -->
+  <div id="quizModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-xl bg-gradient-to-b from-sky-900/95 via-blue-950/95 to-indigo-950 border-4 border-amber-400 rounded-3xl shadow-2xl p-6 text-white">
+      
+      <!-- Top banner -->
+      <div class="flex items-center justify-between pb-3 border-b border-sky-700/50">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">⭐</span>
+          <div>
+            <h3 class="text-base font-black text-amber-300">Bắt Được Chú Cá Thông Thái!</h3>
+            <p class="text-[11px] text-sky-200">Đúng nhận <strong class="text-yellow-300">+300 ĐIỂM</strong> & chế độ Cuồng Nộ Săn Mồi!</p>
+          </div>
+        </div>
+        <div class="px-3 py-1 rounded-full bg-slate-900/80 border border-sky-400 text-xs font-bold">
+          Thời gian: <span id="quizTimer" class="text-emerald-300 font-black text-sm">20s</span>
+        </div>
+      </div>
+
+      <!-- Câu hỏi -->
+      <div class="my-4 p-4 bg-sky-950/70 border border-sky-500/30 rounded-2xl">
+        <div class="flex items-center justify-between mb-1.5">
+          <span id="quizCategory" class="text-[11px] font-semibold text-sky-300">Chủ đề: Từ vựng</span>
+          <button id="btnSpeakWord" onclick="speakCurrentWord()" class="text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1 cursor-pointer">
+            🔊 <span>Nghe phát âm</span>
+          </button>
+        </div>
+        <p id="quizQuestionText" class="text-base sm:text-lg font-bold leading-snug"></p>
+      </div>
+
+      <!-- 4 Đáp án A B C D -->
+      <div id="quizOptionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3"></div>
+
+      <!-- Giải thích kết quả -->
+      <div id="quizExplanationBox" class="hidden p-3 rounded-2xl border text-xs leading-relaxed mb-3"></div>
+
+      <!-- Nút tiếp tục -->
+      <button id="btnQuizContinue" onclick="closeQuizModal()" class="hidden w-full py-3 bg-amber-400 text-slate-950 font-black rounded-xl cursor-pointer hover:brightness-110">
+        Tiếp tục bơi ngay ➔
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL QUẢN LÝ CÂU HỎI TIẾNG ANH ================= -->
+  <div id="questionBankModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900 border-2 border-sky-500/50 rounded-3xl shadow-2xl text-slate-100 overflow-hidden">
+      <div class="px-6 py-4 bg-gradient-to-r from-sky-900 to-indigo-900 border-b border-sky-600/40 flex items-center justify-between">
+        <h2 class="text-lg font-black text-white flex items-center gap-2">
+          📖 Ngân Hàng Câu Hỏi Tiếng Anh
+        </h2>
+        <button onclick="closeQuestionBank()" class="p-1.5 text-slate-300 hover:text-white rounded-lg">✕</button>
+      </div>
+
+      <div class="p-4 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between gap-3">
+        <input id="searchQuestionInput" oninput="renderQuestionTable()" type="text" placeholder="Tìm kiếm câu hỏi, từ vựng..." class="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-amber-400" />
+        <button onclick="promptAddNewQuestion()" class="px-4 py-2 bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow cursor-pointer hover:bg-amber-300">
+          + Thêm câu hỏi
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-800 text-slate-300 uppercase border-b border-slate-700">
+              <th class="py-2.5 px-3">STT</th>
+              <th class="py-2.5 px-3">Câu hỏi & Từ vựng</th>
+              <th class="py-2.5 px-3">Đáp án đúng</th>
+              <th class="py-2.5 px-3">Giải thích</th>
+            </tr>
+          </thead>
+          <tbody id="questionTableBody" class="divide-y divide-slate-800"></tbody>
+        </table>
+      </div>
+
+      <div class="p-3 bg-slate-950 border-t border-slate-800 text-right">
+        <button onclick="closeQuestionBank()" class="px-5 py-2 bg-sky-600 text-white font-bold rounded-xl text-xs hover:bg-sky-500">
+          Đóng lại
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL KẾT THÚC GAME OVER ================= -->
+  <div id="gameOverModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-md bg-gradient-to-b from-sky-950 via-slate-900 to-slate-950 border-3 border-amber-400 rounded-3xl p-6 text-center text-white shadow-2xl">
+      <div class="text-4xl mb-2">💥🦈</div>
+      <h2 class="text-2xl font-black text-amber-300 mb-1">KẾT THÚC VÒNG BƠI!</h2>
+      <p class="text-xs text-sky-200 mb-4">Bạn đã có một chuyến phiêu lưu đại dương thật tuyệt vời!</p>
+
+      <div class="grid grid-cols-2 gap-2 mb-5 text-left text-xs">
+        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+          <span class="text-slate-400 block">Điểm số</span>
+          <span id="finalScore" class="text-xl font-black text-amber-300">0</span>
+        </div>
+        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+          <span class="text-slate-400 block">Cấp tiến hóa</span>
+          <span id="finalLevel" class="text-xl font-black text-sky-300">Cấp 1</span>
+        </div>
+        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+          <span class="text-slate-400 block">Số cá đã nuốt</span>
+          <span id="finalEaten" class="text-xl font-black text-emerald-300">0 chú cá</span>
+        </div>
+        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+          <span class="text-slate-400 block">Kỷ lục cao nhất</span>
+          <span id="finalHighScore" class="text-xl font-black text-purple-300">0</span>
+        </div>
+      </div>
+
+      <button onclick="startGame()" class="w-full py-3.5 bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black rounded-xl text-base shadow-lg hover:brightness-110 cursor-pointer">
+        🔄 BƠI LẠI TRẬN MỚI
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= LOGIC TOÀN BỘ GAME ================= -->
+  <script>
+    /* 1. KHO CÂU HỎI TIẾNG ANH & LƯU LOCALSTORAGE */
+    const DEFAULT_QUESTIONS = [
+      {
+        id: 'q1',
+        question: 'Trong tiếng Anh, con cá mập được gọi là gì?',
+        phrase: 'Shark',
+        options: ['Shark', 'Whale', 'Dolphin', 'Jellyfish'],
+        correctIndex: 0,
+        explanation: '"Shark" là cá mập. "Whale" là cá voi, "Dolphin" là cá heo, "Jellyfish" là sứa.',
+        category: 'Từ vựng (Vocabulary)'
+      },
+      {
+        id: 'q2',
+        question: 'Chọn từ đúng: "A big fish can ______ smaller fish."',
+        phrase: 'can eat',
+        options: ['eats', 'eat', 'ate', 'eating'],
+        correctIndex: 1,
+        explanation: 'Sau động từ khiếm khuyết "can" ta dùng động từ nguyên mẫu không "to" -> "eat".',
+        category: 'Ngữ pháp (Grammar)'
+      },
+      {
+        id: 'q3',
+        question: 'Thành ngữ "A fish out of water" mang ý nghĩa gì?',
+        phrase: 'A fish out of water',
+        options: ['Cá bị khát nước', 'Cảm thấy lạc lõng, bỡ ngỡ', 'Bơi lội rất giỏi', 'Thích đi câu cá'],
+        correctIndex: 1,
+        explanation: '"A fish out of water" nghĩa là một người cảm thấy xa lạ, không thoải mái trong môi trường mới.',
+        category: 'Thành ngữ (Idiom)'
+      },
+      {
+        id: 'q4',
+        question: 'Sinh vật biển nào lớn nhất hành tinh?',
+        phrase: 'Blue Whale',
+        options: ['Great White Shark', 'Blue Whale', 'Giant Squid', 'Orca'],
+        correctIndex: 1,
+        explanation: '"Blue Whale" (Cá voi xanh) là loài sinh vật khổng lồ nhất từng tồn tại trên Trái Đất.',
+        category: 'Thế giới đại dương'
+      },
+      {
+        id: 'q5',
+        question: 'Từ nào sau đây có nghĩa là "rạn san hô"?',
+        phrase: 'Coral reef',
+        options: ['Seaweed', 'Coral reef', 'Starfish', 'Seashell'],
+        correctIndex: 1,
+        explanation: '"Coral reef" là rạn san hô, mái nhà của hàng ngàn sinh vật biển.',
+        category: 'Từ vựng (Vocabulary)'
+      },
+      {
+        id: 'q6',
+        question: 'Quá khứ đơn của động từ "swim" (bơi) là gì?',
+        phrase: 'swim - swam - swum',
+        options: ['swimmed', 'swam', 'swum', 'swimming'],
+        correctIndex: 1,
+        explanation: '"Swim" là động từ bất quy tắc: Hiện tại "swim", Quá khứ "swam".',
+        category: 'Ngữ pháp (Grammar)'
+      }
+    ];
+
+    let questions = JSON.parse(localStorage.getItem('fish_game_questions') || 'null') || DEFAULT_QUESTIONS;
+    function saveQuestions() {
+      localStorage.setItem('fish_game_questions', JSON.stringify(questions));
+    }
+
+    /* 2. BỘ TỔNG HỢP ÂM THANH WEB AUDIO API (KHÔNG CẦN TẢI FILE NGOÀI) */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      playChomp() {
+        if (this.muted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, t);
+        osc.frequency.exponentialRampToValueAtTime(120, t + 0.12);
+        g.gain.setValueAtTime(0.6, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+        osc.connect(g);
+        g.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.13);
+      }
+      playBloop() {
+        if (this.muted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 0.1);
+        g.gain.setValueAtTime(0.3, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.connect(g);
+        g.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.11);
+      }
+      playCorrect() {
+        if (this.muted) return;
+        this.init();
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        const t = this.ctx.currentTime;
+        notes.forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t + i * 0.08);
+          g.gain.setValueAtTime(0.3, t + i * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.08 + 0.25);
+          osc.connect(g);
+          g.connect(this.ctx.destination);
+          osc.start(t + i * 0.08);
+          osc.stop(t + i * 0.08 + 0.26);
+        });
+      }
+      playWrong() {
+        if (this.muted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(260, t);
+        osc.frequency.linearRampToValueAtTime(90, t + 0.35);
+        g.gain.setValueAtTime(0.4, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+        osc.connect(g);
+        g.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.36);
+      }
+      playExplode() {
+        if (this.muted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(140, t);
+        osc.frequency.exponentialRampToValueAtTime(30, t + 0.3);
+        g.gain.setValueAtTime(0.5, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.connect(g);
+        g.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.31);
+      }
+      speak(text) {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'en-US';
+          u.rate = 0.9;
+          window.speechSynthesis.speak(u);
+        }
+      }
+    }
+    const sound = new SoundEngine();
+
+    /* 3. THIẾT LẬP THẾ GIỚI GAME & CANVAS */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let gameActive = false;
+    let isPaused = false;
+    let selectedSharkId = 'cute_baby_shark';
+    let difficulty = 'medium';
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem('fish_game_highscore') || '0', 10);
+    let level = 1;
+    let growth = 0;
+    let lives = 3;
+    let boostStamina = 100;
+    let isFrenzy = false;
+    let frenzyTimer = null;
+    let fishesEaten = 0;
+
+    // Con trỏ & Cá mập người chơi
+    const player = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      baseRadius: 40,
+      radius: 40,
+      facing: 1, // 1: phải, -1: trái
+      mouthOpen: 0,
+      isBoosting: false,
+      wiggle: 0,
+      invincible: 0
+    };
+    const target = { x: player.x, y: player.y };
+
+    let preys = [];
+    let obstacles = [];
+    let particles = [];
+    let floatingTexts = [];
+
+    // Danh sách các loài cá bé
+    const PREY_SPECIES = [
+      { name: 'Cá Sáp Xanh', color: '#38bdf8', finColor: '#0284c7', radius: 15, score: 25 },
+      { name: 'Cá Bầu Tròn', color: '#f472b6', finColor: '#db2777', radius: 18, score: 30 },
+      { name: 'Cá Vàng Mỏ Chu', color: '#fbbf24', finColor: '#d97706', radius: 22, score: 40 },
+      { name: 'Cá Cầu Vồng', color: '#a78bfa', finColor: '#7c3aed', radius: 26, score: 55 }
+    ];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Điều khiển Chuột & Phím
+    window.addEventListener('pointermove', (e) => {
+      target.x = e.clientX;
+      target.y = e.clientY;
+    });
+    window.addEventListener('pointerdown', (e) => {
+      sound.init();
+      player.isBoosting = true;
+    });
+    window.addEventListener('pointerup', () => { player.isBoosting = false; });
+
+    window.addEventListener('keydown', (e) => {
+      sound.init();
+      if (e.code === 'Space' || e.key === 'Shift') player.isBoosting = true;
+      if (e.key === 'p' || e.key === 'P') togglePause();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' || e.key === 'Shift') player.isBoosting = false;
+    });
+
+    /* 4. SINH CON MỒI & CHƯỚNG NGẠI VẬT */
+    function spawnPrey() {
+      const sp = PREY_SPECIES[Math.floor(Math.random() * PREY_SPECIES.length)];
+      const fromLeft = Math.random() < 0.5;
+      const x = fromLeft ? -sp.radius * 2 : canvas.width + sp.radius * 2;
+      const y = 80 + Math.random() * (canvas.height - 180);
+      const speed = difficulty === 'hard' ? 2.5 + Math.random() * 1.5 : 1.8 + Math.random() * 1.2;
+      const hasQuiz = Math.random() < 0.35; // 35% cá mang câu đố tiếng Anh
+
+      preys.push({
+        ...sp,
+        x, y,
+        vx: fromLeft ? speed : -speed,
+        vy: (Math.random() - 0.5) * 0.8,
+        facing: fromLeft ? 1 : -1,
+        hasQuiz,
+        wiggle: Math.random() * 6
+      });
+    }
+
+    function spawnObstacle() {
+      const types = ['urchin', 'jellyfish', 'mine'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const fromLeft = Math.random() < 0.5;
+      const x = fromLeft ? -40 : canvas.width + 40;
+      const y = 90 + Math.random() * (canvas.height - 180);
+      const speed = difficulty === 'hard' ? 1.6 : 1.0;
+
+      obstacles.push({
+        type,
+        x, y,
+        vx: fromLeft ? speed : -speed,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: type === 'urchin' ? 24 : type === 'jellyfish' ? 28 : 26,
+        rot: 0
+      });
+    }
+
+    /* 5. VẼ CÁ MẬP VÀ SINH VẬT TRÊN CANVAS */
+    function drawShark(p) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(p.facing, 1);
+
+      // Uốn lượn thân cá
+      const wag = Math.sin(p.wiggle) * 4;
+
+      // Hào quang khi Cuồng Nộ
+      if (isFrenzy) {
+        ctx.save();
+        ctx.shadowColor = '#facc15';
+        ctx.shadowBlur = 25;
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.radius * 1.4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Nhấp nháy khi vừa bị thương
+      if (p.invincible > 0 && Math.floor(p.invincible / 4) % 2 === 0) {
+        ctx.globalAlpha = 0.4;
+      }
+
+      // Đuôi cá mập
+      ctx.fillStyle = selectedSharkId === 'cute_baby_shark' ? '#0284c7' : '#1e1b4b';
+      ctx.beginPath();
+      ctx.moveTo(-p.radius * 0.8, 0);
+      ctx.lineTo(-p.radius * 1.6, -p.radius * 0.7 + wag);
+      ctx.lineTo(-p.radius * 1.3, wag);
+      ctx.lineTo(-p.radius * 1.6, p.radius * 0.7 + wag);
+      ctx.closePath();
+      ctx.fill();
+
+      // Vây lưng
+      ctx.beginPath();
+      ctx.moveTo(-p.radius * 0.2, -p.radius * 0.6);
+      ctx.quadraticCurveTo(-p.radius * 0.1, -p.radius * 1.3, -p.radius * 0.5, -p.radius * 1.2);
+      ctx.lineTo(-p.radius * 0.4, -p.radius * 0.5);
+      ctx.fill();
+
+      // Thân cá mập tròn trịa cute
+      const grad = ctx.createLinearGradient(0, -p.radius, 0, p.radius);
+      if (selectedSharkId === 'cute_baby_shark') {
+        grad.addColorStop(0, '#38bdf8');
+        grad.addColorStop(0.6, '#0284c7');
+        grad.addColorStop(1, '#e0f2fe'); // Bụng trắng cute
+      } else {
+        grad.addColorStop(0, '#4338ca');
+        grad.addColorStop(0.6, '#1e1b4b');
+        grad.addColorStop(1, '#c7d2fe');
+      }
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.radius * 1.1, p.radius * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mắt to tròn long lanh
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(p.radius * 0.5, -p.radius * 0.2, p.radius * 0.26, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(p.radius * 0.58, -p.radius * 0.2, p.radius * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Đốm sáng trong mắt
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(p.radius * 0.62, -p.radius * 0.25, p.radius * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Miệng cá & Răng nhọn
+      ctx.fillStyle = '#be123c';
+      ctx.beginPath();
+      const mouthY = p.radius * 0.2;
+      const mouthOpenAmount = p.mouthOpen > 0 ? p.radius * 0.35 : p.radius * 0.08;
+      ctx.ellipse(p.radius * 0.65, mouthY, p.radius * 0.25, mouthOpenAmount, 0, 0, Math.PI);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawPrey(fish) {
+      ctx.save();
+      ctx.translate(fish.x, fish.y);
+      ctx.scale(fish.facing, 1);
+
+      // Nếu cá mang câu đố: Hào quang vàng sao lấp lánh
+      if (fish.hasQuiz) {
+        ctx.save();
+        ctx.shadowColor = '#facc15';
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, fish.radius * 1.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Đuôi vẫy
+      const wag = Math.sin(fish.wiggle) * 3;
+      ctx.fillStyle = fish.finColor;
+      ctx.beginPath();
+      ctx.moveTo(-fish.radius * 0.8, 0);
+      ctx.lineTo(-fish.radius * 1.5, -fish.radius * 0.6 + wag);
+      ctx.lineTo(-fish.radius * 1.5, fish.radius * 0.6 + wag);
+      ctx.closePath();
+      ctx.fill();
+
+      // Thân cá
+      ctx.fillStyle = fish.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, fish.radius, fish.radius * 0.65, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mắt
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(fish.radius * 0.45, -fish.radius * 0.15, fish.radius * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(fish.radius * 0.52, -fish.radius * 0.15, fish.radius * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (fish.hasQuiz) {
+        ctx.fillStyle = '#facc15';
+        ctx.font = 'bold 10px Fredoka, sans-serif';
+        ctx.fillText('⭐ CÂU ĐỐ', -20, -fish.radius - 4);
+      }
+      ctx.restore();
+    }
+
+    function drawObstacle(obs) {
+      ctx.save();
+      ctx.translate(obs.x, obs.y);
+      ctx.rotate(obs.rot);
+
+      if (obs.type === 'urchin') {
+        // Nhím biển gai nhọn
+        ctx.fillStyle = '#581c87';
+        ctx.beginPath();
+        ctx.arc(0, 0, obs.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 10; i++) {
+          const ang = (i * Math.PI * 2) / 10;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(ang) * obs.radius * 0.5, Math.sin(ang) * obs.radius * 0.5);
+          ctx.lineTo(Math.cos(ang) * obs.radius, Math.sin(ang) * obs.radius);
+          ctx.stroke();
+        }
+      } else if (obs.type === 'jellyfish') {
+        // Sứa điện phát sáng
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.7)';
+        ctx.beginPath();
+        ctx.arc(0, 0, obs.radius * 0.7, Math.PI, 0);
+        ctx.fill();
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 2;
+        for (let i = -2; i <= 2; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * 6, 0);
+          ctx.lineTo(i * 6, obs.radius);
+          ctx.stroke();
+        }
+      } else {
+        // Mìn biển
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(0, 0, obs.radius * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    /* 6. VÒNG LẶP CHÍNH (GAME LOOP) */
+    let lastSpawnPrey = 0;
+    let lastSpawnObs = 0;
+
+    function gameLoop(time) {
+      if (!isPaused && gameActive) {
+        // Tốc độ bơi & Thể lực tăng tốc
+        let speed = isFrenzy ? 8.5 : difficulty === 'hard' ? 5.2 : 4.4;
+        if (player.isBoosting && boostStamina > 5) {
+          speed *= 1.8;
+          boostStamina = Math.max(0, boostStamina - 0.5);
+          // Sinh bọt nước
+          if (Math.random() < 0.6) {
+            particles.push({
+              x: player.x - player.facing * player.radius,
+              y: player.y + (Math.random() - 0.5) * 15,
+              vx: -player.facing * 3,
+              vy: (Math.random() - 0.5) * 2,
+              r: 4 + Math.random() * 5,
+              alpha: 0.8
+            });
+          }
+        } else {
+          boostStamina = Math.min(100, boostStamina + 0.3);
+        }
+        document.getElementById('hudBoostBar').style.width = boostStamina + '%';
+
+        // Di chuyển mượt về phía con trỏ
+        const dx = target.x - player.x;
+        const dy = target.y - player.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 5) {
+          player.x += (dx / dist) * Math.min(dist, speed);
+          player.y += (dy / dist) * Math.min(dist, speed);
+          if (Math.abs(dx) > 10) player.facing = dx > 0 ? 1 : -1;
+        }
+        player.wiggle += player.isBoosting ? 0.35 : 0.2;
+        if (player.mouthOpen > 0) player.mouthOpen -= 0.05;
+        if (player.invincible > 0) player.invincible--;
+
+        // Giữ trong màn hình
+        player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+        player.y = Math.max(player.radius + 50, Math.min(canvas.height - player.radius - 20, player.y));
+
+        // Sinh cá & chướng ngại vật định kỳ
+        if (time - lastSpawnPrey > 1400 && preys.length < 6) {
+          spawnPrey();
+          lastSpawnPrey = time;
+        }
+        if (time - lastSpawnObs > 3800 && obstacles.length < 3) {
+          spawnObstacle();
+          lastSpawnObs = time;
+        }
+
+        // Cập nhật cá bé & Va chạm đớp mồi
+        for (let i = preys.length - 1; i >= 0; i--) {
+          const f = preys[i];
+          f.x += f.vx;
+          f.y += f.vy;
+          f.wiggle += 0.2;
+
+          // Xóa khi ra khỏi màn hình
+          if ((f.vx > 0 && f.x > canvas.width + 60) || (f.vx < 0 && f.x < -60)) {
+            preys.splice(i, 1);
+            continue;
+          }
+
+          // Kiểm tra va chạm miệng cá mập
+          const mouthX = player.x + player.facing * player.radius * 0.6;
+          const mouthY = player.y;
+          const hitDist = Math.hypot(mouthX - f.x, mouthY - f.y);
+
+          if (hitDist < player.radius * 0.7 + f.radius) {
+            // Nuốt cá bé!
+            sound.playChomp();
+            player.mouthOpen = 1.0;
+            const eaten = preys.splice(i, 1)[0];
+            fishesEaten++;
+
+            // NẾU LÀ CÁ MANG CÂU ĐỐ: Mở popup câu đố ngay!
+            if (eaten.hasQuiz) {
+              openQuizModal();
+              break;
+            }
+
+            // Điểm & Tiến hóa
+            const pts = eaten.score * (isFrenzy ? 2 : 1);
+            addScore(pts);
+            floatingTexts.push({ x: eaten.x, y: eaten.y - 10, text: `+${pts}`, color: '#facc15', a: 1 });
+
+            growth += 20;
+            if (growth >= 100) {
+              levelUp();
+            } else {
+              document.getElementById('hudGrowthBar').style.width = growth + '%';
+              document.getElementById('hudGrowthPercent').innerText = growth + '%';
+            }
+          }
+        }
+
+        // Cập nhật chướng ngại vật
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.x += obs.vx;
+          obs.y += obs.vy;
+          obs.rot += 0.02;
+
+          if ((obs.vx > 0 && obs.x > canvas.width + 60) || (obs.vx < 0 && obs.x < -60)) {
+            obstacles.splice(i, 1);
+            continue;
+          }
+
+          // Va chạm với cá mập
+          const hitDist = Math.hypot(player.x - obs.x, player.y - obs.y);
+          if (hitDist < player.radius * 0.6 + obs.radius) {
+            if (isFrenzy) {
+              // Cuồng nộ phá tan mìn!
+              sound.playExplode();
+              obstacles.splice(i, 1);
+              floatingTexts.push({ x: obs.x, y: obs.y, text: 'Húc Tan! 💥', color: '#facc15', a: 1 });
+            } else if (player.invincible <= 0) {
+              sound.playExplode();
+              player.invincible = 60;
+              lives--;
+              updateHearts();
+              floatingTexts.push({ x: player.x, y: player.y - 20, text: '-1 Mạng 💔', color: '#f43f5e', a: 1 });
+
+              if (lives <= 0) {
+                gameOver();
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      // --- RENDER ĐỒ HỌA RA CANVAS ---
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Màu nền biển xanh thẳm
+      const oceanGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      oceanGrad.addColorStop(0, '#0284c7');
+      oceanGrad.addColorStop(0.5, '#0369a1');
+      oceanGrad.addColorStop(1, '#082f49');
+      ctx.fillStyle = oceanGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Tia nắng rọi từ mặt nước
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#ffffff';
+      for (let r = 0; r < 4; r++) {
+        ctx.beginPath();
+        const rx = (canvas.width / 4) * r + Math.sin(time * 0.001 + r) * 40;
+        ctx.moveTo(rx, 0);
+        ctx.lineTo(rx + 140, canvas.height);
+        ctx.lineTo(rx + 60, canvas.height);
+        ctx.lineTo(rx - 40, 0);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Vẽ chướng ngại vật & Cá bé
+      obstacles.forEach(drawObstacle);
+      preys.forEach(drawPrey);
+
+      // Vẽ cá mập người chơi
+      drawShark(player);
+
+      // Bong bóng nước
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.vy -= 0.05;
+        pt.alpha -= 0.02;
+        if (pt.alpha <= 0) { particles.splice(i, 1); continue; }
+        ctx.save();
+        ctx.globalAlpha = pt.alpha;
+        ctx.fillStyle = '#e0f2fe';
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Chữ điểm số bay lơ lửng
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 1.2;
+        ft.a -= 0.025;
+        if (ft.a <= 0) { floatingTexts.splice(i, 1); continue; }
+        ctx.save();
+        ctx.globalAlpha = ft.a;
+        ctx.fillStyle = ft.color;
+        ctx.font = 'bold 16px Fredoka, sans-serif';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* 7. XỬ LÝ ĐIỂM SỐ, TIẾN HÓA VÀ GIAO DIỆN */
+    function addScore(pts) {
+      score += pts;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('fish_game_highscore', highScore.toString());
+      }
+      document.getElementById('hudScore').innerText = score.toLocaleString();
+    }
+
+    function levelUp() {
+      level = Math.min(4, level + 1);
+      growth = 0;
+      sound.playCorrect();
+      player.radius = player.baseRadius * (1 + (level - 1) * 0.28);
+      document.getElementById('hudLevelBadge').innerText = `TIẾN HÓA CẤP ${level}`;
+      document.getElementById('hudGrowthBar').style.width = '0%';
+      document.getElementById('hudGrowthPercent').innerText = '0%';
+      floatingTexts.push({ x: player.x, y: player.y - 35, text: `TIẾN HÓA CẤP ${level}! 🎉`, color: '#facc15', a: 1 });
+      activateFrenzy(5000);
+    }
+
+    function activateFrenzy(duration = 6000) {
+      isFrenzy = true;
+      document.getElementById('hudFrenzyBadge').classList.remove('hidden');
+      if (frenzyTimer) clearTimeout(frenzyTimer);
+      frenzyTimer = setTimeout(() => {
+        isFrenzy = false;
+        document.getElementById('hudFrenzyBadge').classList.add('hidden');
+      }, duration);
+    }
+
+    function updateHearts() {
+      let h = '';
+      for (let i = 0; i < 3; i++) h += i < lives ? '❤️' : '🖤';
+      document.getElementById('hudHearts').innerText = h;
+    }
+
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById('btnTogglePause').innerText = isPaused ? '▶️' : '⏸️';
+    }
+
+    /* 8. XỬ LÝ CÂU ĐỐ TIẾNG ANH (QUIZ MODAL) */
+    let currentQuiz = null;
+    let quizTimeLeft = 20;
+    let quizInterval = null;
+
+    function openQuizModal() {
+      isPaused = true;
+      currentQuiz = questions[Math.floor(Math.random() * questions.length)];
+      quizTimeLeft = 20;
+
+      document.getElementById('quizCategory').innerText = `Chủ đề: ${currentQuiz.category}`;
+      document.getElementById('quizQuestionText').innerText = currentQuiz.question;
+      document.getElementById('quizTimer').innerText = `${quizTimeLeft}s`;
+      document.getElementById('quizExplanationBox').classList.add('hidden');
+      document.getElementById('btnQuizContinue').classList.add('hidden');
+
+      // Tự động phát âm từ vựng tiếng Anh
+      if (currentQuiz.phrase) sound.speak(currentQuiz.phrase);
+
+      const container = document.getElementById('quizOptionsContainer');
+      container.innerHTML = '';
+      currentQuiz.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'p-3 rounded-xl border border-sky-600 bg-sky-900/50 hover:bg-sky-800 text-left font-semibold cursor-pointer text-sm transition';
+        btn.innerText = `${['A', 'B', 'C', 'D'][idx]}. ${opt}`;
+        btn.onclick = () => selectQuizAnswer(idx);
+        container.appendChild(btn);
+      });
+
+      document.getElementById('quizModal').classList.remove('hidden');
+
+      if (quizInterval) clearInterval(quizInterval);
+      quizInterval = setInterval(() => {
+        quizTimeLeft--;
+        document.getElementById('quizTimer').innerText = `${quizTimeLeft}s`;
+        if (quizTimeLeft <= 0) {
+          clearInterval(quizInterval);
+          selectQuizAnswer(-1); // Hết giờ
+        }
+      }, 1000);
+    }
+
+    function speakCurrentWord() {
+      if (currentQuiz && currentQuiz.phrase) sound.speak(currentQuiz.phrase);
+    }
+
+    function selectQuizAnswer(selectedIndex) {
+      clearInterval(quizInterval);
+      const isCorrect = selectedIndex === currentQuiz.correctIndex;
+      const buttons = document.querySelectorAll('#quizOptionsContainer button');
+
+      buttons.forEach((b, i) => {
+        b.disabled = true;
+        if (i === currentQuiz.correctIndex) {
+          b.className = 'p-3 rounded-xl border-2 border-emerald-400 bg-emerald-600 text-white font-bold text-left text-sm';
+        } else if (i === selectedIndex) {
+          b.className = 'p-3 rounded-xl border-2 border-rose-400 bg-rose-600 text-white font-bold text-left text-sm';
+        } else {
+          b.className = 'p-3 rounded-xl border border-slate-700 bg-slate-900/50 text-slate-500 text-left text-sm';
+        }
+      });
+
+      const expBox = document.getElementById('quizExplanationBox');
+      expBox.classList.remove('hidden');
+
+      if (isCorrect) {
+        sound.playCorrect();
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+        addScore(300);
+        activateFrenzy(6000);
+        expBox.className = 'p-3 rounded-2xl border border-emerald-400 bg-emerald-950/80 text-emerald-200 text-xs leading-relaxed mb-3';
+        expBox.innerHTML = `<strong>🎉 CHÍNH XÁC (+300 ĐIỂM & CUỒNG NỘ)!</strong><br>${currentQuiz.explanation}`;
+      } else {
+        sound.playWrong();
+        expBox.className = 'p-3 rounded-2xl border border-amber-400 bg-amber-950/80 text-amber-200 text-xs leading-relaxed mb-3';
+        expBox.innerHTML = `<strong>⚠️ CHƯA ĐÚNG RỒI!</strong><br>${currentQuiz.explanation}`;
+      }
+
+      document.getElementById('btnQuizContinue').classList.remove('hidden');
+    }
+
+    function closeQuizModal() {
+      document.getElementById('quizModal').classList.add('hidden');
+      isPaused = false;
+    }
+
+    /* 9. BẢNG QUẢN LÝ CÂU HỎI */
+    function openQuestionBank() {
+      isPaused = true;
+      renderQuestionTable();
+      document.getElementById('questionBankModal').classList.remove('hidden');
+    }
+    function closeQuestionBank() {
+      document.getElementById('questionBankModal').classList.add('hidden');
+      isPaused = false;
+    }
+    function renderQuestionTable() {
+      const qText = document.getElementById('searchQuestionInput').value.toLowerCase();
+      const tbody = document.getElementById('questionTableBody');
+      tbody.innerHTML = '';
+      questions
+        .filter(q => q.question.toLowerCase().includes(qText) || (q.phrase && q.phrase.toLowerCase().includes(qText)))
+        .forEach((q, idx) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-800/60';
+          tr.innerHTML = `
+            <td class="py-2 px-3 font-bold text-slate-400">${idx + 1}</td>
+            <td class="py-2 px-3 font-semibold text-slate-200">${q.question} <br><span class="text-amber-300 font-mono text-[11px]">🔊 ${q.phrase || ''}</span></td>
+            <td class="py-2 px-3 text-emerald-300 font-bold">${q.options[q.correctIndex]}</td>
+            <td class="py-2 px-3 text-slate-400 text-[11px]">${q.explanation}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+    }
+
+    function promptAddNewQuestion() {
+      const q = prompt('Nhập nội dung câu hỏi tiếng Anh mới:');
+      if (!q) return;
+      const phrase = prompt('Cụm từ tiếng Anh cần luyện phát âm (VD: Shark):', 'Shark');
+      const optA = prompt('Phương án A:', 'Shark');
+      const optB = prompt('Phương án B:', 'Whale');
+      const optC = prompt('Phương án C:', 'Dolphin');
+      const optD = prompt('Phương án D:', 'Octopus');
+      const correct = parseInt(prompt('Đáp án đúng là gì (0: A, 1: B, 2: C, 3: D)?', '0'), 10) || 0;
+      const exp = prompt('Giải thích ngắn gọn:', 'Từ vựng tiếng Anh về biển.');
+
+      questions.unshift({
+        id: 'q_' + Date.now(),
+        question: q,
+        phrase: phrase,
+        options: [optA, optB, optC, optD],
+        correctIndex: Math.min(3, Math.max(0, correct)),
+        explanation: exp,
+        category: 'Từ vựng (Vocabulary)'
+      });
+      saveQuestions();
+      renderQuestionTable();
+    }
+
+    /* 10. BẮT ĐẦU VÀ KẾT THÚC GAME */
+    function selectShark(id) {
+      selectedSharkId = id;
+      document.getElementById('hudSharkName').innerText = id === 'cute_baby_shark' ? 'Bé Cá Mập Cute' : 'Cá Mập Ngàn Sao';
+      document.getElementById('cardSharkBaby').className = id === 'cute_baby_shark' ? 'p-3.5 rounded-2xl border-2 border-amber-400 bg-sky-900/80 shadow-lg cursor-pointer ring-2 ring-amber-400/50 text-center' : 'p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 cursor-pointer text-center';
+      document.getElementById('cardSharkStarry').className = id === 'starry_shark' ? 'p-3.5 rounded-2xl border-2 border-amber-400 bg-sky-900/80 shadow-lg cursor-pointer ring-2 ring-amber-400/50 text-center' : 'p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 cursor-pointer text-center';
+    }
+
+    function setDifficulty(diff) {
+      difficulty = diff;
+      document.getElementById('btnDiffMedium').className = diff === 'medium' ? 'p-2 rounded-xl border-2 border-amber-400 bg-sky-900/90 text-emerald-300 font-black text-xs' : 'p-2 rounded-xl border-2 border-slate-700 bg-slate-950/60 text-slate-400 font-bold text-xs';
+      document.getElementById('btnDiffHard').className = diff === 'hard' ? 'p-2 rounded-xl border-2 border-rose-400 bg-rose-950/90 text-rose-300 font-black text-xs' : 'p-2 rounded-xl border-2 border-slate-700 bg-slate-950/60 text-slate-400 font-bold text-xs';
+      document.getElementById('btnToggleDifficulty').innerText = diff === 'medium' ? 'Vừa 🟢' : 'Khó ⚡';
+    }
+
+    function startGame() {
+      sound.init();
+      document.getElementById('characterModal').classList.add('hidden');
+      document.getElementById('gameOverModal').classList.add('hidden');
+
+      score = 0;
+      level = 1;
+      growth = 0;
+      lives = 3;
+      boostStamina = 100;
+      fishesEaten = 0;
+      preys = [];
+      obstacles = [];
+      particles = [];
+      floatingTexts = [];
+      player.radius = player.baseRadius;
+      player.x = canvas.width / 2;
+      player.y = canvas.height / 2;
+
+      document.getElementById('hudScore').innerText = '0';
+      document.getElementById('hudLevelBadge').innerText = 'TIẾN HÓA CẤP 1';
+      document.getElementById('hudGrowthBar').style.width = '0%';
+      document.getElementById('hudGrowthPercent').innerText = '0%';
+      updateHearts();
+
+      gameActive = true;
+      isPaused = false;
+    }
+
+    function gameOver() {
+      gameActive = false;
+      document.getElementById('finalScore').innerText = score.toLocaleString();
+      document.getElementById('finalLevel').innerText = `Cấp ${level}`;
+      document.getElementById('finalEaten').innerText = `${fishesEaten} chú cá`;
+      document.getElementById('finalHighScore').innerText = highScore.toLocaleString();
+      document.getElementById('gameOverModal').classList.remove('hidden');
+    }
+
+    // Gắn sự kiện các nút trên thanh HUD
+    document.getElementById('btnToggleDifficulty').onclick = () => setDifficulty(difficulty === 'medium' ? 'hard' : 'medium');
+    document.getElementById('btnOpenQuestionBank').onclick = openQuestionBank;
+    document.getElementById('btnTogglePause').onclick = togglePause;
+    document.getElementById('btnToggleMute').onclick = () => {
+      sound.muted = !sound.muted;
+      document.getElementById('btnToggleMute').innerText = sound.muted ? '🔇' : '🔊';
+    };
+
+    // Khởi động vòng lặp game
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
